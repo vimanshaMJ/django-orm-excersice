@@ -161,4 +161,80 @@ class PostLastView(View):
         }
         return JsonResponse(post_data)
     
+class PostOrderByView(View):
+    def get(self, request):
+        field = request.GET.get('field')
+        posts = Post.objects.all().order_by(field)
+        posts_list = list(posts.values())
+        return JsonResponse(posts_list, safe=False)
     
+class ReversePostsView(View):
+    def get(self, request):
+        posts = Post.objects.all().reverse()
+        posts_list = list(posts.values())
+        return JsonResponse(posts_list, safe=False)
+    
+
+
+class DistinctUsersView(View):
+   def get(self, request):
+        field = request.GET.get('field')
+        distinct_users = User.objects.values(field).distinct()  
+        distinct_values = list(distinct_users.values_list(field, flat=True))
+            
+        return JsonResponse(distinct_values, safe=False)
+        
+        
+class PostValuesView(View):
+    def get(self, request):
+        fields = request.GET.get('fields').split(',')
+        posts = Post.objects.values(*fields)
+        posts_list = list(posts)
+        return JsonResponse(posts_list, safe=False)
+
+class PostValuesListView(View):
+    def get(self, request):
+        fields = request.GET.get('fields').split(',')
+        flat = request.GET.get('flat') == 'true'
+        posts = Post.objects.values_list(*fields, flat=flat)
+        posts_list = list(posts)
+        return JsonResponse(posts_list, safe=False)
+
+class CommentsSelectRelatedView(View):
+    def get(self, request):
+        post_id = request.GET.get('post_id')
+        comments = Comment.objects.select_related('post').filter(post_id=post_id)
+        comments_list = list(comments.values())
+        return JsonResponse(comments_list, safe=False)
+
+class UsersUsingView(View):
+    def get(self, request, db_alias):
+        users = User.objects.using(db_alias).all()
+        users_list = list(users.values())
+        return JsonResponse(users_list, safe=False)
+
+class PostExistsView(View):
+    def get(self, request):
+        title = request.GET.get('title')
+        exists = Post.objects.filter(title=title).exists()
+        return JsonResponse({'exists': exists})
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UpdateUserView(View):
+    def put(self, request, id):
+        data = json.loads(request.body)
+        User.objects.filter(id=id).update(**data)
+        return JsonResponse({'message': 'User updated successfully!'})
+    
+class CommentListView(View):
+    def get(self, request):
+        comments = Comment.objects.all()
+        comments_list = list(comments.values())
+        return JsonResponse(comments_list, safe=False)    
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DeleteCommentView(View):
+    def delete(self, request, id):
+        comment = get_object_or_404(Comment, id=id)
+        comment.delete()
+        return JsonResponse({'message': 'Comment deleted successfully!'})
