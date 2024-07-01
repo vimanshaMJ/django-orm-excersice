@@ -12,9 +12,23 @@ def home(request):
     return HttpResponse("Hey there! This is a Django ORM exercise 01.")
 
 
-@require_http_methods(["GET"])
 def user_list(request):
     users = User.objects.all()
     users_list = list(users.values())
     return JsonResponse(users_list, safe=False)
+
+def users_by_email(request, email):
+    user = User.objects.filter(email=email)
+    user_list = list(user.values())
+    return JsonResponse(user_list, safe=False)
+
+def users_by_exclude_username(request, username):
+    user = User.objects.exclude(username=username)
+    user_list = list(user.values())
+    return JsonResponse(user_list, safe=False)
+
+def users_by_id(id):
+    user = User.objects.get(id=id)
+    user_list = list(user.values())
+    return JsonResponse(user_list, safe=False)
 
