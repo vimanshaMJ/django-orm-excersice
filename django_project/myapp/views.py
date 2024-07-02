@@ -78,6 +78,28 @@ class UserCountView(View):
         count = User.objects.all().count()
         return JsonResponse({"count": count}, status=200)
     
+class DistinctUsersView(View):
+   def get(self, request):
+        field = request.GET.get('field')
+        distinct_users = User.objects.values(field).distinct()  
+        distinct_values = list(distinct_users.values_list(field, flat=True))
+            
+        return JsonResponse(distinct_values, safe=False)
+   
+class UsersUsingView(View):
+    def get(self, request, db_alias):
+        users = User.objects.using(db_alias).all()
+        users_list = list(users.values())
+        return JsonResponse(users_list, safe=False)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UpdateUserView(View):
+    def put(self, request, id):
+        data = json.loads(request.body)
+        User.objects.filter(id=id).update(**data)
+        return JsonResponse({'message': 'User updated successfully!'})
+    
+
 
 # Post views
 class PostListView(View):
@@ -86,7 +108,6 @@ class PostListView(View):
         posts_list = list(posts.values())
         return JsonResponse(posts_list, safe=False)
     
-
 class PostGetOrCreateView(View):
     def get(self, request):
         title = request.GET.get('title')
@@ -103,29 +124,6 @@ class PostGetOrCreateView(View):
             'updated_at': post.updated_at
         }
         return JsonResponse(post_data)
-    
-
-# Profile views
-class ProfileListView(View):
-    def get(self, request):
-        profiles = Profile.objects.all()
-        profiles_list = list(profiles.values())
-        return JsonResponse(profiles_list, safe=False)
-    
-@method_decorator(csrf_exempt, name='dispatch')
-class ProfileUpdateOrCreateView(View):
-    def post(self, request):
-        data = json.loads(request.body)
-        user = get_object_or_404(User, id=data['user_id'])
-        profile, created = Profile.objects.update_or_create(
-            user=user,
-            defaults={
-                'user_id': data['user_id'],
-                'bio': data['bio'],
-                'birth_date': data['birth_date']
-            }
-        )
-        return JsonResponse({"message": "Profile updated/created successfully!"}, status=200)
     
 class AnnotationPostView(View):
     def get(self, request):
@@ -174,17 +172,6 @@ class ReversePostsView(View):
         posts_list = list(posts.values())
         return JsonResponse(posts_list, safe=False)
     
-
-
-class DistinctUsersView(View):
-   def get(self, request):
-        field = request.GET.get('field')
-        distinct_users = User.objects.values(field).distinct()  
-        distinct_values = list(distinct_users.values_list(field, flat=True))
-            
-        return JsonResponse(distinct_values, safe=False)
-        
-        
 class PostValuesView(View):
     def get(self, request):
         fields = request.GET.get('fields').split(',')
@@ -199,32 +186,46 @@ class PostValuesListView(View):
         posts = Post.objects.values_list(*fields, flat=flat)
         posts_list = list(posts)
         return JsonResponse(posts_list, safe=False)
+    
+class PostExistsView(View):
+    def get(self, request):
+        title = request.GET.get('title')
+        exists = Post.objects.filter(title=title).exists()
+        return JsonResponse({'exists': exists})
+    
 
+
+# Profile views
+class ProfileListView(View):
+    def get(self, request):
+        profiles = Profile.objects.all()
+        profiles_list = list(profiles.values())
+        return JsonResponse(profiles_list, safe=False)
+    
+@method_decorator(csrf_exempt, name='dispatch')
+class ProfileUpdateOrCreateView(View):
+    def post(self, request):
+        data = json.loads(request.body)
+        user = get_object_or_404(User, id=data['user_id'])
+        profile, created = Profile.objects.update_or_create(
+            user=user,
+            defaults={
+                'user_id': data['user_id'],
+                'bio': data['bio'],
+                'birth_date': data['birth_date']
+            }
+        )
+        return JsonResponse({"message": "Profile updated/created successfully!"}, status=200)
+    
+
+
+# Comment views
 class CommentsSelectRelatedView(View):
     def get(self, request):
         post_id = request.GET.get('post_id')
         comments = Comment.objects.select_related('post').filter(post_id=post_id)
         comments_list = list(comments.values())
         return JsonResponse(comments_list, safe=False)
-
-class UsersUsingView(View):
-    def get(self, request, db_alias):
-        users = User.objects.using(db_alias).all()
-        users_list = list(users.values())
-        return JsonResponse(users_list, safe=False)
-
-class PostExistsView(View):
-    def get(self, request):
-        title = request.GET.get('title')
-        exists = Post.objects.filter(title=title).exists()
-        return JsonResponse({'exists': exists})
-
-@method_decorator(csrf_exempt, name='dispatch')
-class UpdateUserView(View):
-    def put(self, request, id):
-        data = json.loads(request.body)
-        User.objects.filter(id=id).update(**data)
-        return JsonResponse({'message': 'User updated successfully!'})
     
 class CommentListView(View):
     def get(self, request):
